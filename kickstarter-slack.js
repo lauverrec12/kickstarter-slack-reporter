@@ -1,6 +1,14 @@
 const KICKSTARTER_STATS_URL = process.env.KICKSTARTER_STATS_URL;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
+if (!KICKSTARTER_STATS_URL) {
+  throw new Error("Falta KICKSTARTER_STATS_URL en GitHub Secrets");
+}
+
+if (!SLACK_WEBHOOK_URL) {
+  throw new Error("Falta SLACK_WEBHOOK_URL en GitHub Secrets");
+}
+
 async function sendSlack(text) {
   const res = await fetch(SLACK_WEBHOOK_URL, {
     method: "POST",
