@@ -40,7 +40,7 @@ async function main() {
 
     console.log("PAGE TEXT START");
     console.log(text.slice(0, 3000));
-    console.log("PAGE TEXT END"); s
+    console.log("PAGE TEXT END");
 
     await browser.close();
 
