@@ -2,49 +2,63 @@ const KICKSTARTER_STATS_URL = process.env.KICKSTARTER_STATS_URL;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
 if (!KICKSTARTER_STATS_URL) {
-  throw new Error("Falta KICKSTARTER_STATS_URL en GitHub Secrets");
+    throw new Error("Falta KICKSTARTER_STATS_URL en GitHub Secrets");
 }
 
 if (!SLACK_WEBHOOK_URL) {
-  throw new Error("Falta SLACK_WEBHOOK_URL en GitHub Secrets");
+    throw new Error("Falta SLACK_WEBHOOK_URL en GitHub Secrets");
 }
 
 async function sendSlack(text) {
-  const res = await fetch(SLACK_WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
+    const res = await fetch(SLACK_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+    });
 
-  if (!res.ok) throw new Error(`Slack error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Slack error: ${res.status} ${await res.text()}`);
 }
 
 async function main() {
-  const res = await fetch(KICKSTARTER_STATS_URL, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      "Accept": "application/json",
-    },
-  });
+    const res = await fetch(KICKSTARTER_STATS_URL, {
+        headers: {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json",
+        },
+    });
 
-  if (!res.ok) {
-    throw new Error(`Kickstarter error: ${res.status} ${await res.text()}`);
-  }
+    if (!res.ok) {
+        throw new Error(`Kickstarter error: ${res.status} ${await res.text()}`);
+    }
 
-  const data = await res.json();
+    const data = await res.json();
 
-  const project = data.project || data;
-  const pledged = Number(project.pledged);
-  const backers = project.backers_count;
-  const state = project.state;
+    const project = data.project || data;
+    const pledged = Number(project.pledged);
+    const backers = project.backers_count;
+    const state = project.state;
 
-  const pledgedFormatted = pledged.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
+    const fxRes = await fetch("https://api.frankfurter.dev/v2/rates?base=EUR&quotes=USD");
+    if (!fxRes.ok) {
+        throw new Error(`FX error: ${fxRes.status} ${await fxRes.text()}`);
+    }
 
-  const message = `
+    const fxData = await fxRes.json();
+    const eurToUsd = fxData.rates.USD;
+    const pledgedUsd = pledged * eurToUsd;
+
+    const pledgedEurFormatted = pledged.toLocaleString("es-ES", {
+        style: "currency",
+        currency: "EUR",
+        maximumFractionDigits: 0,
+    });
+
+    const pledgedUsdFormatted = pledgedUsd.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+    });
+    const message = `
 🚀 *Resumen Kickstarter — MYHIXEL Sync Pump*
 
 💰 Contribuido total: *${pledgedFormatted}*
@@ -54,13 +68,13 @@ async function main() {
 🔗 https://www.kickstarter.com/projects/myhixel/myhixel-sync-pump-stronger-firmness-and-measurable-gains
 `;
 
-  await sendSlack(message);
+    await sendSlack(message);
 }
 
 main().catch(async (error) => {
-  console.error(error);
-  if (SLACK_WEBHOOK_URL) {
-    await sendSlack(`⚠️ Error leyendo Kickstarter: ${error.message}`);
-  }
-  process.exit(1);
+    console.error(error);
+    if (SLACK_WEBHOOK_URL) {
+        await sendSlack(`⚠️ Error leyendo Kickstarter: ${error.message}`);
+    }
+    process.exit(1);
 });
