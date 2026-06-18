@@ -27,5 +27,5 @@ jobs:
       - name: Run Kickstarter report
         run: npm start
         env:
-          KICKSTARTER_URL: ${{ secrets.KICKSTARTER_URL }}
+          KICKSTARTER_STATS_URL: ${{ secrets.KICKSTARTER_STATS_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
