@@ -38,6 +38,10 @@ async function main() {
 
     const text = await page.locator("body").innerText();
 
+    console.log("PAGE TEXT START");
+    console.log(text.slice(0, 3000));
+    console.log("PAGE TEXT END"); s
+
     await browser.close();
 
     const amountMatch = text.match(/([€$£]\s?[\d,.]+)\s*(contributed|pledged|contribuido)/i);
