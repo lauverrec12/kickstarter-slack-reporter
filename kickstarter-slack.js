@@ -94,7 +94,6 @@ async function main() {
 
 💰 Total: *${formatEUR(pledged)} (${formatUSD(pledgedUsd)})*
 👥 Total backers: *${backers}*
-📌 Estado: *${state}*
 
 🔗 https://www.kickstarter.com/projects/myhixel/myhixel-sync-pump-stronger-firmness-and-measurable-gains
 `;
