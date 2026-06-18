@@ -80,11 +80,6 @@ async function main() {
     JSON.stringify({ pledged, backers }, null, 2)
   );
 
-  if (pledgedDelta === 0 && backersDelta === 0) {
-    console.log("No changes detected");
-    return;
-  }
-
   const eurToUsd = await getEurToUsdRate();
 
   const pledgedUsd = pledged * eurToUsd;
