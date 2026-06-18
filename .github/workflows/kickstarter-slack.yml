@@ -3,7 +3,7 @@ name: Kickstarter Slack Report
 on:
   push:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "2/5 * * * *"
   workflow_dispatch:
 
 jobs:
