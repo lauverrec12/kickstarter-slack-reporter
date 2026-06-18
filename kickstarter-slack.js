@@ -2,6 +2,8 @@ const fs = require("fs");
 
 const KICKSTARTER_STATS_URL = process.env.KICKSTARTER_STATS_URL;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+const KICKSTARTER_EUR_TO_USD_RATE = process.env.KICKSTARTER_EUR_TO_USD_RATE;
+const DEFAULT_EUR_TO_USD_RATE = 1.1523464426;
 
 if (!KICKSTARTER_STATS_URL) throw new Error("Falta KICKSTARTER_STATS_URL");
 if (!SLACK_WEBHOOK_URL) throw new Error("Falta SLACK_WEBHOOK_URL");
@@ -16,34 +18,55 @@ async function sendSlack(text) {
   if (!res.ok) throw new Error(`Slack error: ${res.status} ${await res.text()}`);
 }
 
-function formatEUR(value) {
-  return value.toLocaleString("es-ES", {
+function formatCurrency(value, currency, locale = currency === "USD" ? "en-US" : "es-ES") {
+  return value.toLocaleString(locale, {
     style: "currency",
-    currency: "EUR",
+    currency,
     maximumFractionDigits: 0,
   });
 }
 
 function formatUSD(value) {
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
+  return formatCurrency(value, "USD");
 }
 
-async function getEurToUsdRate() {
-  const res = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD");
+function toNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+async function getUsdRate(project, currency, pledged) {
+  const usdPledged = toNumber(project.usd_pledged);
+
+  if (usdPledged !== null && pledged > 0) {
+    return usdPledged / pledged;
+  }
+
+  const staticUsdRate = toNumber(project.static_usd_rate);
+
+  if (staticUsdRate !== null) {
+    return staticUsdRate;
+  }
+
+  if (currency === "USD") {
+    return 1;
+  }
+
+  if (currency === "EUR") {
+    return toNumber(KICKSTARTER_EUR_TO_USD_RATE) || DEFAULT_EUR_TO_USD_RATE;
+  }
+
+  const res = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=USD`);
 
   if (!res.ok) {
     throw new Error(`FX error: ${res.status} ${await res.text()}`);
   }
 
   const data = await res.json();
-  const rate = data.rates?.USD;
+  const rate = toNumber(data.rates?.USD);
 
-  if (!rate) {
-    throw new Error(`No se encontró tipo de cambio EUR→USD: ${JSON.stringify(data)}`);
+  if (rate === null) {
+    throw new Error(`No se encontró tipo de cambio ${currency}→USD: ${JSON.stringify(data)}`);
   }
 
   return rate;
@@ -66,13 +89,16 @@ async function main() {
 
   const pledged = Number(project.pledged);
   const backers = Number(project.backers_count);
-  const state = project.state || "unknown";
+  const currency = project.currency || "EUR";
+  const usdRate = await getUsdRate(project, currency, pledged);
+  const pledgedUsd = pledged * usdRate;
 
   const previous = fs.existsSync("state.json")
     ? JSON.parse(fs.readFileSync("state.json", "utf8"))
     : { pledged: 0, backers: 0 };
 
   const pledgedDelta = pledged - Number(previous.pledged || 0);
+  const pledgedDeltaUsd = pledgedDelta * usdRate;
   const backersDelta = backers - Number(previous.backers || 0);
 
   fs.writeFileSync(
@@ -80,19 +106,14 @@ async function main() {
     JSON.stringify({ pledged, backers }, null, 2)
   );
 
-  const eurToUsd = await getEurToUsdRate();
-
-  const pledgedUsd = pledged * eurToUsd;
-  const pledgedDeltaUsd = pledgedDelta * eurToUsd;
-
   const message = `
 🚀 *Kickstarter Update — MYHIXEL Sync Pump*
 
 📈 Cambio desde el último reporte:
-• ${pledgedDelta >= 0 ? "+" : ""}${formatEUR(pledgedDelta)} (${pledgedDelta >= 0 ? "+" : ""}${formatUSD(pledgedDeltaUsd)})
+• ${pledgedDelta >= 0 ? "+" : ""}${formatCurrency(pledgedDelta, currency)} (${pledgedDeltaUsd >= 0 ? "+" : ""}${formatUSD(pledgedDeltaUsd)})
 • ${backersDelta >= 0 ? "+" : ""}${backersDelta} backers
 
-💰 Total: *${formatEUR(pledged)} (${formatUSD(pledgedUsd)})*
+💰 Total: *${formatCurrency(pledged, currency)} (${formatUSD(pledgedUsd)})*
 👥 Total backers: *${backers}*
 
 🔗 https://www.kickstarter.com/projects/myhixel/myhixel-sync-pump-stronger-firmness-and-measurable-gains
