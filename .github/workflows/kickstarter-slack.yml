@@ -1,10 +1,10 @@
 name: Kickstarter Slack Report
 
 on:
-  push:
-  schedule:
-    - cron: "2/5 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   send-report:
@@ -24,3 +24,9 @@ jobs:
         env:
           KICKSTARTER_STATS_URL: ${{ secrets.KICKSTARTER_STATS_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Commit updated state
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update Kickstarter state
+          file_pattern: state.json
