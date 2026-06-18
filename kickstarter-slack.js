@@ -38,13 +38,19 @@ async function main() {
     const backers = project.backers_count;
     const state = project.state;
 
-    const fxRes = await fetch("https://api.frankfurter.dev/v2/rates?base=EUR&quotes=USD");
+    const fxRes = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD");
+
     if (!fxRes.ok) {
         throw new Error(`FX error: ${fxRes.status} ${await fxRes.text()}`);
     }
 
     const fxData = await fxRes.json();
-    const eurToUsd = fxData.rates.USD;
+    const eurToUsd = fxData.rates?.USD;
+
+    if (!eurToUsd) {
+        throw new Error(`No se encontró tipo de cambio EUR→USD: ${JSON.stringify(fxData)}`);
+    }
+
     const pledgedUsd = pledged * eurToUsd;
 
     const pledgedEurFormatted = pledged.toLocaleString("es-ES", {
@@ -61,9 +67,8 @@ async function main() {
     const message = `
 🚀 *Resumen Kickstarter — MYHIXEL Sync Pump*
 
-💰 Contribuido total: *${pledgedFormatted}*
+💰 Contribuido total: *${pledgedUsdFormatted} (${pledgedEurFormatted})*
 👥 Backers: *${backers}*
-📌 Estado: *${state}*
 
 🔗 https://www.kickstarter.com/projects/myhixel/myhixel-sync-pump-stronger-firmness-and-measurable-gains
 `;
