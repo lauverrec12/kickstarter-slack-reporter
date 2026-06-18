@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const KICKSTARTER_STATS_URL = process.env.KICKSTARTER_STATS_URL;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
