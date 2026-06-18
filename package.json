@@ -1,8 +1,5 @@
 {
   "scripts": {
     "start": "node kickstarter-slack.js"
-  },
-  "dependencies": {
-    "@playwright/test": "^1.45.0"
   }
 }
